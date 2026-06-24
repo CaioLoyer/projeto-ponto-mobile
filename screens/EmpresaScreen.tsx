@@ -1,6 +1,8 @@
 import * as Location from "expo-location";
 import { useSQLiteContext } from "expo-sqlite";
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useState } from "react";
+import { useFocusEffect } from "@react-navigation/native";
+
 import {
   Alert,
   FlatList,
@@ -29,15 +31,18 @@ export function EmpresaScreen() {
   const [nome, setNome] = useState("");
   const [latitude, setLatitude] = useState("");
   const [longitude, setLongitude] = useState("");
-  const [modoLocalizacao, setModoLocalizacao] = useState<ModoLocalizacao>("gps");
+  const [modoLocalizacao, setModoLocalizacao] =
+    useState<ModoLocalizacao>("gps");
   const [obtendoLocalizacao, setObtendoLocalizacao] = useState(false);
   const [salvando, setSalvando] = useState(false);
   const [mensagem, setMensagem] = useState("");
   const [empresas, setEmpresas] = useState<Empresa[]>([]);
 
-  useEffect(() => {
-    carregarEmpresas();
-  }, []);
+  useFocusEffect(
+    useCallback(() => {
+      carregarEmpresas();
+    }, []),
+  );
 
   async function carregarEmpresas() {
     const resultado = await listarEmpresas(db);
@@ -52,7 +57,7 @@ export function EmpresaScreen() {
       if (status !== "granted") {
         Alert.alert(
           "Permissão negada",
-          "Precisamos da sua localização para preencher automaticamente."
+          "Precisamos da sua localização para preencher automaticamente.",
         );
         return;
       }
@@ -72,7 +77,12 @@ export function EmpresaScreen() {
     }
     const lat = Number(latitude.replace(",", "."));
     const lon = Number(longitude.replace(",", "."));
-    if (latitude.trim() === "" || longitude.trim() === "" || isNaN(lat) || isNaN(lon)) {
+    if (
+      latitude.trim() === "" ||
+      longitude.trim() === "" ||
+      isNaN(lat) ||
+      isNaN(lon)
+    ) {
       return "Informe uma latitude e longitude válidas.";
     }
     if (lat < -90 || lat > 90 || lon < -180 || lon > 180) {
@@ -108,18 +118,22 @@ export function EmpresaScreen() {
   }
 
   function handleExcluir(id: number) {
-    Alert.alert("Excluir empresa", "Tem certeza que deseja excluir esta empresa?", [
-      { text: "Cancelar", style: "cancel" },
-      {
-        text: "Excluir",
-        style: "destructive",
-        onPress: async () => {
-          await excluirEmpresa(db, id);
-          setMensagem("Empresa removida.");
-          await carregarEmpresas();
+    Alert.alert(
+      "Excluir empresa",
+      "Tem certeza que deseja excluir esta empresa?",
+      [
+        { text: "Cancelar", style: "cancel" },
+        {
+          text: "Excluir",
+          style: "destructive",
+          onPress: async () => {
+            await excluirEmpresa(db, id);
+            setMensagem("Empresa removida.");
+            await carregarEmpresas();
+          },
         },
-      },
-    ]);
+      ],
+    );
   }
 
   const empresaAtivaId = empresas.length > 0 ? empresas[0].id : null;
@@ -205,11 +219,21 @@ export function EmpresaScreen() {
               editable={modoLocalizacao === "manual" || longitude !== ""}
             />
 
-            <Botao titulo="Salvar empresa" onPress={handleSalvar} carregando={salvando} />
+            <Botao
+              titulo="Salvar empresa"
+              onPress={handleSalvar}
+              carregando={salvando}
+            />
 
             <Mensagem
               texto={mensagem}
-              tipo={mensagem.includes("sucesso") ? "sucesso" : mensagem ? "erro" : "info"}
+              tipo={
+                mensagem.includes("sucesso")
+                  ? "sucesso"
+                  : mensagem
+                    ? "erro"
+                    : "info"
+              }
             />
 
             <Text style={styles.subtitulo}>Empresas cadastradas</Text>

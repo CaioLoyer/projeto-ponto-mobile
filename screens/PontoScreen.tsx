@@ -11,7 +11,9 @@ import { buscarEmpresaMaisRecente } from "../repositories/empresaRepository";
 import { inserirPonto, listarPontos } from "../repositories/pontoRepository";
 import { Empresa } from "../types/empresa";
 import { Ponto } from "../types/ponto";
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useState } from "react";
+import { useFocusEffect } from "@react-navigation/native";
+
 import {
   RAIO_VALIDACAO_METROS,
   base64ParaBytes,
@@ -26,15 +28,17 @@ export function PontoScreen() {
   const [registrando, setRegistrando] = useState(false);
   const [mensagem, setMensagem] = useState("");
   const [mensagemTipo, setMensagemTipo] = useState<"sucesso" | "erro" | "info">(
-    "info"
+    "info",
   );
   const [pontos, setPontos] = useState<Ponto[]>([]);
   const [empresaAtiva, setEmpresaAtiva] = useState<Empresa | null>(null);
 
-  useEffect(() => {
-    carregarPontos();
-    carregarEmpresaAtiva();
-  }, []);
+  useFocusEffect(
+    useCallback(() => {
+      carregarPontos();
+      carregarEmpresaAtiva();
+    }, []),
+  );
 
   async function carregarPontos() {
     const resultado = await listarPontos(db);
@@ -70,7 +74,7 @@ export function PontoScreen() {
       if (status !== "granted") {
         Alert.alert(
           "Permissão negada",
-          "Precisamos da sua localização para validar o ponto."
+          "Precisamos da sua localização para validar o ponto.",
         );
         return;
       }
@@ -87,7 +91,7 @@ export function PontoScreen() {
         posicao.coords.latitude,
         posicao.coords.longitude,
         empresa.latitude,
-        empresa.longitude
+        empresa.longitude,
       );
       const validado = distancia <= RAIO_VALIDACAO_METROS;
       const fotoBytes = base64ParaBytes(fotoBase64);
@@ -108,15 +112,17 @@ export function PontoScreen() {
         validado
           ? `Ponto validado! Distância de ${distancia.toFixed(1)} m da empresa.`
           : `Ponto registrado fora da localização da empresa (${distancia.toFixed(
-              1
-            )} m de distância).`
+              1,
+            )} m de distância).`,
       );
 
       setNomeFuncionario("");
       await carregarPontos();
     } catch (erro) {
       setMensagemTipo("erro");
-      setMensagem("Não foi possível obter a localização para registrar o ponto.");
+      setMensagem(
+        "Não foi possível obter a localização para registrar o ponto.",
+      );
     } finally {
       setRegistrando(false);
     }
